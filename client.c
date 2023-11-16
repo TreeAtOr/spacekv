@@ -16,27 +16,44 @@ struct shmbuf {
 }shmbuf;
 
 #define SHMSIZE sizeof(shmbuf)
-
+int* notUsed;
 
 //here task names
 
 //here task names
 
 //here create database
-void createDB() {
-
+int createDB(key_t key, int size) {
+	int shmid = shmget(key, size, 0666 | IPC_CREAT | IPC_EXCL);
+	if (shmid == -1) {
+		printf("Create error \n");
+		printf("ERRNO - %d\n", errno);
+		return -1;
+	}
+	else return shmid;
+	//printf("%d\n", shmid);
 }
 //here...
 
 //here connect database
-void connectDB() {
-
+int connectDB(key_t key, int size) {
+	int shmid = shmget(key, size, 0666);
+	if (shmid == -1) {
+		printf("Create error \n");
+		printf("ERRNO - %d\n", errno);
+		return -1;
+	}
+	else return shmid;
 }
 //...
 
 //here disconnect database
-void disconnectDB() {
-
+int disconnectDB() {
+	if (shmdt(*notUsed) < 0) {
+		printf("Can't detach shared memory\n");
+		return -1;
+	}
+	return 0;
 }
 //...
 
@@ -70,8 +87,12 @@ int parser() {
 		printf("Enter command:\n");
 		fgets(command, PARSERSIZE, stdin);
 
-		if (strcmp(command, "create")) createDB();
-		if (strcmp(command, "connect")) connectDB();
+		key_t key;
+		int shmid;
+		int size;
+
+		if (strcmp(command, "create")) shmid = createDB(key, size);
+		if (strcmp(command, "connect")) shmid = connectDB(key, size);
 		if (strcmp(command, "disconnect")) disconnectDB();
 		if (strcmp(command, "add")) addInf();
 		if (strcmp(command, "delete")) deleteInf();
@@ -88,15 +109,7 @@ int main() {
 	key_t key;
 	key = 11;
 
-	//create/connect shared memory 
-	int shmid = shmget(key, SHMSIZE, 0666 | IPC_CREAT);
-	printf("%d\n", shmid);
-	if (shmid == -1) {
-		printf("Shmid error \n");
-		printf("ERRNO - %d\n", errno);
-		return -1;
-	}
-	//create...
+	int shmid;
 
 	//include the shared memory area in the address space of the current process
 	if ((sgmb = (struct shmbuf*)shmat(shmid, NULL, 0)) == (struct shmbuf*)(-1)) {
